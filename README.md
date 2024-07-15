@@ -61,11 +61,3 @@ If you would like to contribute to this project, please follow these steps:
 ## License
 
 This project is licensed under the MIT License.
-```
-
-### Notes:
-- Ensure that you replace the placeholders in the `.env` section with actual values.
-- Customize the GitHub repository URL and other relevant details.
-- Update the license section if you use a different license.
-
-This README.md file provides clear instructions and necessary information about the project, ensuring that users can set it up and run it smoothly.
