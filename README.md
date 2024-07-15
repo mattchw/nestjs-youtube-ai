@@ -1,5 +1,7 @@
 # YouTube AI
 
+![Youtube AI Banner](./banner.png)
+
 This project provides an API for downloading, transcribing, and summarizing YouTube videos using NestJS, OpenAI Whisper, and GPT-4.
 
 ## Features
