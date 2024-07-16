@@ -57,7 +57,22 @@ export class YoutubeService {
     return transcription.text;
   }
 
-  async generateSummary(transcript: string): Promise<string> {
+  async generateMarkdownSummary(transcript: string): Promise<string> {
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: `Summarize the following transcript with sections and detailed bullet points in well-structured markdown: ${transcript}` },
+      ],
+      temperature: 0.5,
+    });
+
+    const summary = response.choices[0].message.content.trim();
+    this.logger.log(`Summary generated: ${summary}`);
+    return summary;
+  }
+
+  async generateHTMLSummary(transcript: string): Promise<string> {
     const response = await this.openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [

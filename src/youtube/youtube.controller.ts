@@ -28,17 +28,37 @@ export class YoutubeController {
 
   private async sendYoutubeSummary(url: string, email: string) {
     const transcript = await this.youtubeService.downloadAndTranscribe(url);
-    const summary = await this.youtubeService.generateSummary(transcript);
+    const summary = await this.youtubeService.generateHTMLSummary(transcript);
     await this.youtubeService.sendEmail(email, summary);
     return;
   }
 
   @Post('summarize')
+  @ApiOperation({ summary: 'Generate YouTube video summary' })
+  @ApiResponse({ status: 200, description: 'Processing started' })
+  @ApiResponse({ status: 500, description: 'Error starting the process' })
+  @ApiBody({ type: TranscribeDto })
+  async summarize(@Body('url') url: string, @Res() res: Response) {
+    try {
+      const transcript = await this.youtubeService.downloadAndTranscribe(url);
+      const summary = await this.youtubeService.generateMarkdownSummary(transcript);
+      return res.status(HttpStatus.OK).json({
+        message: summary
+      });
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Error generating summary',
+        error: error.message,
+      });
+    }
+  }
+
+  @Post('summarize/email')
   @ApiOperation({ summary: 'Generate YouTube video summary and send it via email' })
   @ApiResponse({ status: 200, description: 'Processing started' })
   @ApiResponse({ status: 500, description: 'Error starting the process' })
   @ApiBody({ type: SendSummaryDto })
-  async summarize(@Body('url') url: string, @Body('email') email: string, @Res() res: Response) {
+  async summarizeAndSendEmail(@Body('url') url: string, @Body('email') email: string, @Res() res: Response) {
     try {
       this.sendYoutubeSummary(url, email);
       return res.status(HttpStatus.OK).json({
