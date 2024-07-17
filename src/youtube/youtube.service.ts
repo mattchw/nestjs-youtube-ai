@@ -6,15 +6,47 @@ import { join } from 'path';
 import OpenAI from 'openai';
 import * as nodemailer from 'nodemailer';
 
+import axios from 'axios';
+import { find } from 'lodash';
+
+import { xmlExtractor } from '../utils/xml';
+
 @Injectable()
 export class YoutubeService {
   private readonly logger = new Logger(YoutubeService.name);
-  private readonly openai;
+  private readonly openai: OpenAI;
 
   constructor(private configService: ConfigService) {
     this.openai = new OpenAI({
       apiKey: this.configService.get<string>('OPENAI_API_KEY'),
     })
+  }
+
+  async getSubtitles(videoUrl: string, lang = "en") {
+    const { data } = await axios.get(videoUrl);
+
+    if (!data.includes('captionTracks'))
+      throw new Error(`Could not find captions for video: ${videoUrl}`);
+
+    const regex = /"captionTracks":(\[.*?\])/;
+    const [match] = regex.exec(data);
+
+    const { captionTracks } = JSON.parse(`{${match}}`);
+    const subtitle =
+      find(captionTracks, {
+        vssId: `.${lang}`,
+      }) ||
+      find(captionTracks, {
+        vssId: `a.${lang}`,
+      }) ||
+      find(captionTracks, ({ vssId }) => vssId && vssId.match(`.${lang}`));
+
+    if (!subtitle || (subtitle && !subtitle.baseUrl))
+      throw new Error(`Could not find ${lang} captions for ${videoUrl}`);
+
+    const { data: transcript } = await await axios.get(subtitle.baseUrl);
+
+    return xmlExtractor(transcript);
   }
 
   async downloadAndTranscribe(youtubeUrl: string): Promise<string> {

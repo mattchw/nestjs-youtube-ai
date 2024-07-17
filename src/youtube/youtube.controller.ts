@@ -9,6 +9,25 @@ import { Response } from 'express';
 export class YoutubeController {
   constructor(private readonly youtubeService: YoutubeService) { }
 
+  @Post('subtitles')
+  @ApiOperation({ summary: 'Get the YouTube subtitles' })
+  @ApiResponse({ status: 200, description: 'Processing started' })
+  @ApiResponse({ status: 500, description: 'Error starting the process' })
+  @ApiBody({ type: TranscribeDto })
+  async getSubtitles(@Body('url') url: string, @Res() res: Response) {
+    try {
+      const subtitles = await this.youtubeService.getSubtitles(url);
+      return res.status(HttpStatus.OK).json({
+        result: subtitles
+      });
+    } catch (error) {
+      return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+        message: 'Error generating transcript',
+        error: error.message,
+      });
+    }
+  }
+
   @Post('transcribe')
   @ApiOperation({ summary: 'Transcribe YouTube video' })
   @ApiResponse({ status: 200, description: 'Processing started' })
