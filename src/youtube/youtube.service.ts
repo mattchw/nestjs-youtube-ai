@@ -22,7 +22,7 @@ export class YoutubeService {
     })
   }
 
-  async getSubtitles(videoUrl: string, lang = "en") {
+  async getSubtitles(videoUrl: string, lang = ["en", "zh"]) {
     const { data } = await axios.get(videoUrl);
 
     if (!data.includes('captionTracks'))
@@ -32,19 +32,36 @@ export class YoutubeService {
     const [match] = regex.exec(data);
 
     const { captionTracks } = JSON.parse(`{${match}}`);
-    const subtitle =
-      find(captionTracks, {
-        vssId: `.${lang}`,
-      }) ||
-      find(captionTracks, {
-        vssId: `a.${lang}`,
-      }) ||
-      find(captionTracks, ({ vssId }) => vssId && vssId.match(`.${lang}`));
+
+    // Function to find subtitle by language
+    const findSubtitleByLang = (lang) => {
+      return (
+        find(captionTracks, {
+          vssId: `.${lang}`,
+        }) ||
+        find(captionTracks, {
+          vssId: `a.${lang}`,
+        }) ||
+        find(captionTracks, ({ vssId }) => vssId && vssId.match(`.${lang}`))
+      );
+    };
+
+    // Attempt to find English, then Chinese subtitles
+    let subtitle = null;
+    for (let language of lang) {
+      subtitle = findSubtitleByLang(language);
+      if (subtitle && subtitle.baseUrl) break;
+    }
+
+    // If no English or Chinese subtitles found, get the first available subtitle
+    if (!subtitle || (subtitle && !subtitle.baseUrl)) {
+      subtitle = captionTracks[0];
+    }
 
     if (!subtitle || (subtitle && !subtitle.baseUrl))
-      throw new Error(`Could not find ${lang} captions for ${videoUrl}`);
+      throw new Error(`Could not find any captions for ${videoUrl}`);
 
-    const { data: transcript } = await await axios.get(subtitle.baseUrl);
+    const { data: transcript } = await axios.get(subtitle.baseUrl);
 
     return xmlExtractor(transcript);
   }
