@@ -1,7 +1,7 @@
 import { Controller, Post, Body, Res, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
 import { YoutubeService } from './youtube.service';
-import { TranscribeDto, SendSummaryDto } from './dto/youtube.dto'
+import { TranscribeDto, SubtitleDto, SendSummaryDto } from './dto/youtube.dto'
 import { Response } from 'express';
 
 @ApiTags('youtube')
@@ -13,10 +13,11 @@ export class YoutubeController {
   @ApiOperation({ summary: 'Get the YouTube subtitles' })
   @ApiResponse({ status: 200, description: 'Processing started' })
   @ApiResponse({ status: 500, description: 'Error starting the process' })
-  @ApiBody({ type: TranscribeDto })
-  async getSubtitles(@Body('url') url: string, @Res() res: Response) {
+  @ApiBody({ type: SubtitleDto })
+  async getSubtitles(@Body() getSubtitleDto: SubtitleDto, @Res() res: Response) {
     try {
-      const subtitles = await this.youtubeService.getSubtitles(url);
+      const lang = getSubtitleDto.lang ? [getSubtitleDto.lang] : undefined;
+      const subtitles = await this.youtubeService.getSubtitles(getSubtitleDto.url, lang);
       return res.status(HttpStatus.OK).json({
         result: subtitles
       });
