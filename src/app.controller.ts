@@ -1,9 +1,9 @@
-import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { Controller, Get, HttpStatus, Res } from "@nestjs/common";
+import { Response } from "express";
 
 @Controller()
 export class AppController {
-  constructor() { }
+  constructor() {}
 
   @Get()
   getStatus(@Res() res: Response) {

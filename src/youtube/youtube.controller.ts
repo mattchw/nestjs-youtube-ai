@@ -1,47 +1,53 @@
-import { Controller, Post, Body, Res, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
-import { YoutubeService } from './youtube.service';
-import { TranscribeDto, SubtitleDto, SendSummaryDto } from './dto/youtube.dto'
-import { Response } from 'express';
+import { Controller, Post, Body, Res, HttpStatus } from "@nestjs/common";
+import { ApiTags, ApiOperation, ApiResponse, ApiBody } from "@nestjs/swagger";
+import { YoutubeService } from "./youtube.service";
+import { TranscribeDto, SubtitleDto, SendSummaryDto } from "./dto/youtube.dto";
+import { Response } from "express";
 
-@ApiTags('youtube')
-@Controller('youtube')
+@ApiTags("youtube")
+@Controller("youtube")
 export class YoutubeController {
   constructor(private readonly youtubeService: YoutubeService) { }
 
-  @Post('subtitles')
-  @ApiOperation({ summary: 'Get the YouTube subtitles' })
-  @ApiResponse({ status: 200, description: 'Processing started' })
-  @ApiResponse({ status: 500, description: 'Error starting the process' })
+  @Post("subtitles")
+  @ApiOperation({ summary: "Get the YouTube subtitles" })
+  @ApiResponse({ status: 200, description: "Processing started" })
+  @ApiResponse({ status: 500, description: "Error starting the process" })
   @ApiBody({ type: SubtitleDto })
-  async getSubtitles(@Body() getSubtitleDto: SubtitleDto, @Res() res: Response) {
+  async getSubtitles(
+    @Body() getSubtitleDto: SubtitleDto,
+    @Res() res: Response,
+  ) {
     try {
       const lang = getSubtitleDto.lang ? [getSubtitleDto.lang] : undefined;
-      const subtitles = await this.youtubeService.getSubtitles(getSubtitleDto.url, lang);
+      const subtitles = await this.youtubeService.getSubtitles(
+        getSubtitleDto.url,
+        lang,
+      );
       return res.status(HttpStatus.OK).json({
         result: subtitles
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'Error generating transcript',
-        error: error.message,
+        message: "Error generating transcript",
+        error: error.message
       });
     }
   }
 
-  @Post('transcribe')
-  @ApiOperation({ summary: 'Transcribe YouTube video' })
-  @ApiResponse({ status: 200, description: 'Processing started' })
-  @ApiResponse({ status: 500, description: 'Error starting the process' })
+  @Post("transcribe")
+  @ApiOperation({ summary: "Transcribe YouTube video" })
+  @ApiResponse({ status: 200, description: "Processing started" })
+  @ApiResponse({ status: 500, description: "Error starting the process" })
   @ApiBody({ type: TranscribeDto })
-  async transcribe(@Body('url') url: string, @Res() res: Response) {
+  async transcribe(@Body("url") url: string, @Res() res: Response) {
     try {
       const transcript = await this.youtubeService.downloadAndTranscribe(url);
       return res.status(HttpStatus.OK).json({ transcript });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'Error generating transcript',
-        error: error.message,
+        message: "Error generating transcript",
+        error: error.message
       });
     }
   }
@@ -53,56 +59,68 @@ export class YoutubeController {
     return;
   }
 
-  @Post('summarize')
-  @ApiOperation({ summary: 'Generate YouTube video summary' })
-  @ApiResponse({ status: 200, description: 'Processing started' })
-  @ApiResponse({ status: 500, description: 'Error starting the process' })
+  @Post("summarize")
+  @ApiOperation({ summary: "Generate YouTube video summary" })
+  @ApiResponse({ status: 200, description: "Processing started" })
+  @ApiResponse({ status: 500, description: "Error starting the process" })
   @ApiBody({ type: TranscribeDto })
-  async summarize(@Body('url') url: string, @Res() res: Response) {
+  async summarize(@Body("url") url: string, @Res() res: Response) {
     try {
       const transcript = await this.youtubeService.downloadAndTranscribe(url);
-      const summary = await this.youtubeService.generateMarkdownSummary(transcript);
+      const summary =
+        await this.youtubeService.generateMarkdownSummary(transcript);
       return res.status(HttpStatus.OK).json({
         message: summary
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'Error generating summary',
-        error: error.message,
+        message: "Error generating summary",
+        error: error.message
       });
     }
   }
 
-  @Post('summarize/email')
-  @ApiOperation({ summary: 'Generate YouTube video summary and send it via email' })
-  @ApiResponse({ status: 200, description: 'Processing started' })
-  @ApiResponse({ status: 500, description: 'Error starting the process' })
+  @Post("summarize/email")
+  @ApiOperation({
+    summary: "Generate YouTube video summary and send it via email"
+  })
+  @ApiResponse({ status: 200, description: "Processing started" })
+  @ApiResponse({ status: 500, description: "Error starting the process" })
   @ApiBody({ type: SendSummaryDto })
-  async summarizeAndSendEmail(@Body('url') url: string, @Body('email') email: string, @Res() res: Response) {
+  async summarizeAndSendEmail(
+    @Body("url") url: string,
+    @Body("email") email: string,
+    @Res() res: Response,
+  ) {
     try {
       this.sendYoutubeSummary(url, email);
       return res.status(HttpStatus.OK).json({
-        message: "Generate youtube summary request received. The summary will be sent via email shortly."
+        message:
+          "Generate youtube summary request received. The summary will be sent via email shortly."
       });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'Error generating summary',
-        error: error.message,
+        message: "Error generating summary",
+        error: error.message
       });
     }
   }
 
-  @Post('email')
-  async sendEmail(@Body('text') text: string, @Body('email') email: string, @Res() res: Response) {
+  @Post("email")
+  async sendEmail(
+    @Body("text") text: string,
+    @Body("email") email: string,
+    @Res() res: Response,
+  ) {
     try {
       await this.youtubeService.sendEmail(email, text);
       return res.status(HttpStatus.OK).json({
         message: "email is successfully sent"
-      })
+      });
     } catch (error) {
       return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
-        message: 'Error sending email',
-        error: error.message,
+        message: "Error sending email",
+        error: error.message
       });
     }
   }

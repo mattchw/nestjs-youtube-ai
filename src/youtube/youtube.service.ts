@@ -1,15 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import * as ytdl from "@distube/ytdl-core";
-import { createWriteStream, createReadStream, existsSync, mkdirSync } from 'fs';
-import { join } from 'path';
-import OpenAI from 'openai';
-import * as nodemailer from 'nodemailer';
+import { createWriteStream, createReadStream, existsSync, mkdirSync } from "fs";
+import { join } from "path";
+import OpenAI from "openai";
+import * as nodemailer from "nodemailer";
 
-import axios from 'axios';
-import { find } from 'lodash';
+import axios from "axios";
+import { find } from "lodash";
 
-import { xmlExtractor } from '../utils/xml';
+import { xmlExtractor } from "../utils/xml";
 
 @Injectable()
 export class YoutubeService {
@@ -18,14 +18,14 @@ export class YoutubeService {
 
   constructor(private configService: ConfigService) {
     this.openai = new OpenAI({
-      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
-    })
+      apiKey: this.configService.get<string>("OPENAI_API_KEY")
+    });
   }
 
   async getSubtitles(videoUrl: string, lang: string[] = ["en", "zh"]) {
     const { data } = await axios.get(videoUrl);
 
-    if (!data.includes('captionTracks'))
+    if (!data.includes("captionTracks"))
       throw new Error(`Could not find captions for video: ${videoUrl}`);
 
     const regex = /"captionTracks":(\[.*?\])/;
@@ -37,10 +37,10 @@ export class YoutubeService {
     const findSubtitleByLang = (lang: string) => {
       return (
         find(captionTracks, {
-          vssId: `.${lang}`,
+          vssId: `.${lang}`
         }) ||
         find(captionTracks, {
-          vssId: `a.${lang}`,
+          vssId: `a.${lang}`
         }) ||
         find(captionTracks, ({ vssId }) => vssId && vssId.match(`.${lang}`))
       );
@@ -48,7 +48,7 @@ export class YoutubeService {
 
     // Attempt to find subtitles by given languages
     let subtitle = null;
-    for (let language of lang) {
+    for (const language of lang) {
       subtitle = findSubtitleByLang(language);
       if (subtitle && subtitle.baseUrl) break;
     }
@@ -67,11 +67,11 @@ export class YoutubeService {
   }
 
   async downloadAndTranscribe(youtubeUrl: string): Promise<string> {
-    const outputDir = join(__dirname, '..', '..', 'tmp');
-    const audioPath = join(outputDir, 'audio.mp4');
+    const outputDir = join(__dirname, "..", "..", "tmp");
+    const audioPath = join(outputDir, "audio.mp4");
 
-    console.log(audioPath)
-    console.log(youtubeUrl)
+    console.log(audioPath);
+    console.log(youtubeUrl);
 
     // Ensure the directory exists
     if (!existsSync(outputDir)) {
@@ -81,15 +81,15 @@ export class YoutubeService {
     this.logger.log(`Starting download for ${youtubeUrl}`);
 
     // Download audio from YouTube
-    const download = ytdl(youtubeUrl, { filter: 'audioonly' });
+    const download = ytdl(youtubeUrl, { filter: "audioonly" });
     const writeStream = createWriteStream(audioPath);
 
     // Wrap the download process in a promise
     await new Promise<void>((resolve, reject) => {
       download.pipe(writeStream);
-      download.on('end', resolve);
-      download.on('error', reject);
-      writeStream.on('error', reject);
+      download.on("end", resolve);
+      download.on("error", reject);
+      writeStream.on("error", reject);
     });
 
     this.logger.log(`Download finished for ${youtubeUrl}`);
@@ -108,12 +108,15 @@ export class YoutubeService {
 
   async generateMarkdownSummary(transcript: string): Promise<string> {
     const response = await this.openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: "gpt-3.5-turbo",
       messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: `Summarize the following transcript with sections and detailed bullet points in well-structured markdown: ${transcript}` },
+        { role: "system", content: "You are a helpful assistant." },
+        {
+          role: "user",
+          content: `Summarize the following transcript with sections and detailed bullet points in well-structured markdown: ${transcript}`
+        }
       ],
-      temperature: 0.5,
+      temperature: 0.5
     });
 
     const summary = response.choices[0].message.content.trim();
@@ -123,12 +126,15 @@ export class YoutubeService {
 
   async generateHTMLSummary(transcript: string): Promise<string> {
     const response = await this.openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: "gpt-3.5-turbo",
       messages: [
-        { role: 'system', content: 'You are a helpful assistant.' },
-        { role: 'user', content: `Summarize the following transcript with sections and detailed bullet points in well-structured html: ${transcript}` },
+        { role: "system", content: "You are a helpful assistant." },
+        {
+          role: "user",
+          content: `Summarize the following transcript with sections and detailed bullet points in well-structured html: ${transcript}`
+        }
       ],
-      temperature: 0.5,
+      temperature: 0.5
     });
 
     const summary = response.choices[0].message.content.trim();
@@ -139,16 +145,16 @@ export class YoutubeService {
   async sendEmail(to: string, summary: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const transporter = nodemailer.createTransport({
-        service: 'gmail',
+        service: "gmail",
         auth: {
-          user: this.configService.get<string>('GMAIL_USER'),
-          pass: this.configService.get<string>('GMAIL_PASS'),
-        },
+          user: this.configService.get<string>("GMAIL_USER"),
+          pass: this.configService.get<string>("GMAIL_PASS")
+        }
       });
       const mailOptions = {
-        from: this.configService.get<string>('GMAIL_USER'),
+        from: this.configService.get<string>("GMAIL_USER"),
         to,
-        subject: 'Your YouTube Video Summary',
+        subject: "Your YouTube Video Summary",
         html: summary
       };
 
@@ -160,7 +166,6 @@ export class YoutubeService {
           resolve();
         }
       });
-    })
-
+    });
   }
 }

@@ -1,5 +1,5 @@
-import { DOMParser } from 'xmldom';
-import { decode } from 'he';
+import { DOMParser } from "xmldom";
+import { decode } from "he";
 
 export function xmlExtractor(xml: string) {
   const parser = new DOMParser();
