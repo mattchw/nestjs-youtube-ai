@@ -1,10 +1,11 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as ytdl from "@distube/ytdl-core";
-import { createWriteStream, createReadStream, existsSync, mkdirSync } from "fs";
+import { createWriteStream, existsSync, mkdirSync } from "fs";
 import { join } from "path";
 import OpenAI from "openai";
 import * as nodemailer from "nodemailer";
+import { OpenAIService } from "../openai/openai.service";
 
 import axios from "axios";
 import { find } from "lodash";
@@ -16,7 +17,10 @@ export class YoutubeService {
   private readonly logger = new Logger(YoutubeService.name);
   private readonly openai: OpenAI;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private openAIService: OpenAIService
+  ) {
     this.openai = new OpenAI({
       apiKey: this.configService.get<string>("OPENAI_API_KEY")
     });
@@ -70,9 +74,6 @@ export class YoutubeService {
     const outputDir = join(__dirname, "..", "..", "tmp");
     const audioPath = join(outputDir, "audio.mp4");
 
-    console.log(audioPath);
-    console.log(youtubeUrl);
-
     // Ensure the directory exists
     if (!existsSync(outputDir)) {
       mkdirSync(outputDir);
@@ -94,16 +95,11 @@ export class YoutubeService {
 
     this.logger.log(`Download finished for ${youtubeUrl}`);
 
-    // Transcribe audio using Whisper
-    const transcription = await this.openai.audio.transcriptions.create({
-      file: createReadStream(audioPath),
-      model: "whisper-1"
-    });
-
-    console.log(transcription.text);
+    // Use OpenAIService to generate transcript
+    const transcript = await this.openAIService.generateTranscript(audioPath);
 
     this.logger.log(`Transcript generated for ${youtubeUrl}`);
-    return transcription.text;
+    return transcript;
   }
 
   async generateMarkdownSummary(transcript: string): Promise<string> {
