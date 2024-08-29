@@ -16,6 +16,7 @@ import { xmlExtractor } from "../utils/xml";
 export class YoutubeService {
   private readonly logger = new Logger(YoutubeService.name);
   private readonly openai: OpenAI;
+  private readonly agent: any;
 
   constructor(
     private configService: ConfigService,
@@ -24,10 +25,15 @@ export class YoutubeService {
     this.openai = new OpenAI({
       apiKey: this.configService.get<string>("OPENAI_API_KEY")
     });
+
+    const encodedCookies = this.configService.get<string>("YOUTUBE_COOKIES");
+    const cookies = JSON.parse(Buffer.from(encodedCookies, "base64").toString("utf-8"));
+
+    this.agent = ytdl.createAgent(cookies);
   }
 
   async getSubtitles(videoUrl: string, lang: string[] = ["en", "zh"]) {
-    const { data } = await axios.get(videoUrl);
+    const { data } = await axios.get(videoUrl, { httpsAgent: this.agent });
 
     if (!data.includes("captionTracks"))
       throw new Error(`Could not find captions for video: ${videoUrl}`);
@@ -82,7 +88,10 @@ export class YoutubeService {
     this.logger.log(`Starting download for ${youtubeUrl}`);
 
     // Download audio from YouTube
-    const download = ytdl(youtubeUrl, { filter: "audioonly" });
+    const download = ytdl(youtubeUrl, {
+      filter: "audioonly",
+      agent: this.agent
+    });
     const writeStream = createWriteStream(audioPath);
 
     // Wrap the download process in a promise
